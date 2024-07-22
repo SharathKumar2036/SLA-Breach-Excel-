@@ -1,0 +1,139 @@
+#From Data Making Customizes
+
+$excel = New-Object -ComObject Excel.Application
+ 
+# Disable alerts and visibility to prevent interruption
+$excel.Visible = $true
+ 
+# Open the Excel file
+$workbook = $excel.Workbooks.Open("C:\Users\id889974\OneDrive - Proximus\Desktop\REPORT AUTOMATION TASKS\Sheet\Raw_data.xlsx")
+ 
+# Select the sheet you want to modify (replace "Sheet1" with the actual sheet name)
+$sheet = $workbook.Sheets.Item(1)
+ 
+# Define the column names you want to remove
+$columnsToRemove = @("Priority", "Active", "Assigned To","Business duration","Number","Milestone","Intervention Window","Fixed","Name")
+ 
+# Get the header row range
+$headerRowRange = $sheet.Rows.Item(1)
+ 
+# Loop through each column header
+foreach ($column in $columnsToRemove) {
+    # Find the column index by searching for the column name
+    $columnIndex = $headerRowRange.Find($column).Column
+ 
+    # Get the entire column range
+    $columnRange = $sheet.Columns.Item($columnIndex)
+ 
+    # Delete the column
+    $columnRange.Delete()
+}
+
+$oldname="Number"
+$newname="Task"
+
+$index=$headerRowRange.Find($oldname).Column
+
+$sheet.Cells.Item(1,$index).Value2 = $newname
+ 
+# Save the changes
+$workbook.Save()
+ 
+# Close the workbook and Excel application
+$workbook.Close($true)
+$excel.Quit()
+ 
+# Clean up
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+Remove-Variable excel
+
+
+#Copying Raw data sheet to Final sheet
+$sourc="C:\Users\id889974\OneDrive - Proximus\Desktop\REPORT AUTOMATION TASKS\Sheet\Raw_data.xlsx"
+$dest="C:\Users\id889974\OneDrive - Proximus\Desktop\REPORT AUTOMATION TASKS\Sheet\Final_data.xlsx"
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $true
+$sourcbook=$excel.Workbooks.Open($sourc)
+$destbook=$excel.Workbooks.Open($dest)
+$sourcesheet= $sourcbook.Sheets.Item(1)
+$destsheet=$destbook.Sheets.Item("Data")
+#del content
+$destsheet.Cells.Clear()
+$sourcesheet.UsedRange.Copy()
+$destsheet.Cells.Item(1,2).PasteSpecial(-4163)
+
+
+$del=$destsheet.Columns.Item(1)
+$del.Delete()
+$destbook.Save()
+$destbook.close($true) 
+$sourcbook.Save()
+$sourcbook.close($true) 
+$excel.Quit()
+
+
+#3rd part for vlook up and time range and pivot refresh
+
+$path = "C:\Users\id889974\OneDrive - Proximus\Desktop\REPORT AUTOMATION TASKS\Sheet\Final_data.xlsx"
+$excel = New-Object -ComObject Excel.Application
+$excel.Visible = $true
+$book = $excel.Workbooks.Open($path)
+
+
+$wsheet2 = $book.Sheets.Item("Data")
+
+
+#Creating a new column b/w assignment group and status
+$range_dom=$wsheet2.Columns.Item("I")
+$range_dom.Insert()
+$wsheet2.Cells.Item(1,9).Value2= "Domain"
+
+$wsheet2.Activate()
+$rows_count=$wsheet2.UsedRange.Rows.Count 
+$wsheet2.Range("I2:I$rows_count").Formula= "=VLOOKUP(B2,'Domain List'!A:B,2,0)"
+
+
+#Time Bucket Range
+
+$bucket=$wsheet2.Columns.Item("K")
+$bucket.Insert()
+$wsheet2.Cells.Item(1,11).Value2= "Business Left Time Bucket"
+for($row=2;$row -le $rows_count; $row++){
+$timein_hrs=$wsheet2.Cells.Item($row,3).Value2
+
+if($timein_hrs -lt 7200)
+{$wsheet2.Cells.Item($row, 11).Value2 = "<2hrs"
+}
+elseif ($timein_hrs -ge 7200 -and $timein_hrs -le 14400){
+    $wsheet2.Cells.Item($row, 11).Value2 = "2hrs to 4hrs"
+    }
+elseif ($timein_hrs -ge 14400 -and $timein_hrs -le 21600){
+    $wsheet2.Cells.Item($row, 11).Value2 = "4hrs to 6hrs"
+    }   
+elseif ($timein_hrs -ge 21600 -and $timein_hrs -le 28800){
+    $wsheet2.Cells.Item($row, 11).Value2 = "6hrs to 8hrs"
+    }
+
+}
+
+$headerrange=$wsheet2.Range("A1","XFD1")
+$headerrange.Font.Bold= $true
+
+$range= $wsheet2.UsedRange
+$range.Borders.Weight=2
+
+
+
+
+$sh1 = $book.sheets.item("Pivot")
+$pivotTables7 = $sh1.PivotTables("PivotTable1")
+$lastRowf6 = $book.sheets.item(“Data”).UsedRange.Rows.Count
+$NewData6 = $book.sheets.item('Data').Range("A1:K$lastRowf6")
+$pivotTables7.ChangePivotCache($book.PivotCaches().create(1,$NewData6))
+$pivotTables7.RefreshTable()
+
+$book.Save()
+$book.close($true) 
+$excel.Quit()
